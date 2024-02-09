@@ -4,11 +4,9 @@ import numpy as np
 def EMA (df: pd.DataFrame, short_period = 5, long_period = 10):
     short_ema = df['close'].ewm(span=short_period, adjust=False).mean() 
     long_ema = df['close'].ewm(span=long_period, adjust=False).mean() 
-    df['short_ema'] = short_ema
-    df['long_ema'] = long_ema
 
-    df['Signal'] = np.where(long_ema<short_ema,1,0)
-    df['Signal'] = np.where(long_ema>short_ema,-1,df['Signal'])
+    df['ema_signal'] = np.where(long_ema<short_ema,1,0)
+    df['ema_signal'] = np.where(long_ema>short_ema,-1,df['ema_signal'])
     return df
 
 def rsi_signals(df:pd.DataFrame, window=14):
@@ -23,7 +21,7 @@ def rsi_signals(df:pd.DataFrame, window=14):
     df['rsi_signal'] = 0
     df.loc[df['rsi_14'] >= 70, 'rsi_signal'] = -1
     df.loc[df['rsi_14'] <= 30, 'rsi_signal'] = 1
-    return df
+    return df.drop('rsi_14',axis=1)
 
 def macd_signals(df, fast_period=12, slow_period=26, signal_period=9):
     ema_fast = df['close'].ewm(span=fast_period, adjust=False).mean()
@@ -44,7 +42,7 @@ def bb_signals(df:pd.DataFrame, n = 20, m = 2):
     df['bb_signal'] = 0
     df.loc[df['close'] >= df['bb_ub'],'bb_signal'] = -1
     df.loc[df['close'] <= df['bb_lb'],'bb_signal'] = 1
-    return df
+    return df.drop(['bb_ub','bb_lb'],axis=1)
 
 def keltner_channels(df: pd.DataFrame, n: int = 10, m: int = 1) -> pd.DataFrame:
     middle_line = df['close'].ewm(span=n).mean()
@@ -69,4 +67,43 @@ def stochastic_oscillator_strategy(df:pd.DataFrame, period=14, oversold=20, over
     df['Stochastic_oscillator'] = np.where(stochastic_oscillator < oversold, 1, 0)
     df['Stochastic_oscillator'] = np.where(stochastic_oscillator > overbought, -1, df['Stochastic_oscillator'])
     return df
+
+
+# calculating Average Directional Index
+def adx_signal(df, period=14):
+    df['High-Low'] = df['high'] - df['low']
+    df['High-PrevClose'] = abs(df['high'] - df['close'].shift())
+    df['Low-PrevClose'] = abs(df['low'] - df['close'].shift())
+
+    df['TR'] = df[['High-Low', 'High-PrevClose', 'Low-PrevClose']].max(axis=1)
+    
+    df['+DM'] = df['high'].diff()
+    df['-DM'] = -df['low'].diff()
+    
+    df['+DM'] = df['+DM'].apply(lambda x: x if x > 0 else 0)
+    df['-DM'] = df['-DM'].apply(lambda x: x if x > 0 else 0)
+    
+    df['Smoothed TR'] = df['TR'].rolling(window=period).mean()
+    df['Smoothed +DM'] = df['+DM'].rolling(window=period).mean()
+    df['Smoothed -DM'] = df['-DM'].rolling(window=period).mean()
+    
+    df['+DI'] = (df['Smoothed +DM'] / df['Smoothed TR']) * 100
+    df['-DI'] = (df['Smoothed -DM'] / df['Smoothed TR']) * 100
+    
+    df['DX'] = abs(df['+DI'] - df['-DI']) / (df['+DI'] + df['-DI']) * 100
+    
+    df['ADX'] = df['DX'].rolling(window=period).mean()
+    
+    return df.drop(['High-Low', 'High-PrevClose', 'Low-PrevClose', 'TR', '+DM', '-DM', 'Smoothed TR', 'Smoothed +DM', 'Smoothed -DM','+DI','-DI','DX'], axis=1)
+
+# Example usage:
+# df = pd.DataFrame({'High': [...], 'Low': [...], 'Close': [...]})
+# df = calculate_adx(df)
+# print(df)
+
+
+
+
+
+
     
