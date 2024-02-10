@@ -1,7 +1,7 @@
 import pandas as pd 
 import numpy as np
 
-def EMA (df: pd.DataFrame, short_period = 5, long_period = 10):
+def EMA (df: pd.DataFrame, short_period = 20, long_period = 50):
     short_ema = df['close'].ewm(span=short_period, adjust=False).mean() 
     long_ema = df['close'].ewm(span=long_period, adjust=False).mean() 
 
