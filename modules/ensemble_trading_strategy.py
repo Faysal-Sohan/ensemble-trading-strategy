@@ -238,7 +238,7 @@ def group3_ensemble_model_signals(df: pd.DataFrame):
     # loading the trained model
     loaded_model = joblib.load('../modules/bagging_logistic_regression_on_returns.pkl')
 
-    # Now you can use the loaded model to make predictions
+    # Using the loaded model to make predictions
     predictions = loaded_model.predict(X_scaled)
     signal = np.where((predictions == 1) & (signals['macd_signal'] == 1) & (signals['ema_signal'] == 1), 1, 0)
     signal = np.where((predictions == -1) & (signals['macd_signal'] == -1) & (signals['ema_signal'] == -1), -1, signal)
