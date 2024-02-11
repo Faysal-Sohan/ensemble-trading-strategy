@@ -122,7 +122,9 @@ def group3_ensemble_model_signals(df: pd.DataFrame):
     X_scaled = data_preprocess(X)
     
     # loading the trained model
-    loaded_model = joblib.load('/home/sohan/Desktop/Final_Assesment/modules/bagging_logistic_regression.pkl')
+    loaded_model = joblib.load('/home/sohan/Desktop/Final_Assesment/modules/random_forrest_classifier_on_return_signal.pkl')
+
+    # loaded_model = tf.keras.model.load('/home/sohan/Desktop/Final_Assesment/modules/ensemble_trading_strategy.pkl')
 
     # Now you can use the loaded model to make predictions
     predictions = loaded_model.predict(X_scaled)
