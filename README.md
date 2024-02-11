@@ -106,3 +106,5 @@ $ pip install pandas-ta
 - "AMT"
 - "CCI"
 
+## Backtesting Notebook
+- Check out the backtest notebook [here](https://github.com/Faysal-Sohan/ensemble-trading-strategy/blob/main/Notebooks/backtest.ipynb)
