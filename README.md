@@ -34,7 +34,7 @@ To calculate technical indicator values, this strategy utilizes the `pandas-ta` 
 $ pip install pandas-ta
 ```
 
-## S & P 500 Assets
+## S & P 50 Assets
 
 ### Industrials
 - "MMM"
