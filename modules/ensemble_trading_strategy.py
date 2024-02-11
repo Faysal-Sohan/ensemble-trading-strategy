@@ -1,8 +1,9 @@
 import os
+import sys
 root_dir = os.getcwd()
+sys.path.insert(1, root_dir)
 import numpy as np
 import pandas as pd
-import indicators as ind
 import matplotlib.pyplot as plt
 import pandas_ta as ta
 import seaborn as sns
@@ -20,17 +21,17 @@ def add_features(df:pd.DataFrame):
     this function takes a dataframe as an input and
     add different technical indicators value as features
     """   
-    df['sma_5'] = ta.sma(df.close, length=20)
-    df['sma_10'] = ta.sma(df.close, length=90)
-    df['ema_5'] = ta.ema(df.close, length=20)
-    df['ema_10'] = ta.ema(df.close, length=90)
+    df['sma_5'] = ta.sma(df.close, length=5)
+    df['sma_10'] = ta.sma(df.close, length=10)
+    df['ema_5'] = ta.ema(df.close, length=5)
+    df['ema_10'] = ta.ema(df.close, length=10)
     a = ta.macd(df.close)
-    df.join(a)
+    df = df.join(a)
     a = ta.adx(df.high,df.low,df.close)
-    df.join(a)
+    df = df.join(a)
     df['rsi_14'] = ta.rsi(df.close, length=14)
     a = ta.bbands(df.close)
-    df.join(a)
+    df = df.join(a)
     df["cci_16"] = ta.cci(df.high, df.low, df.close, length=16)
     df["atr"] = ta.atr(df.high, df.low, df.close, length=16)
     a = ta.stoch(df.high, df.low, df.close)
@@ -51,9 +52,9 @@ def get_target_signal_rets(df: pd.DataFrame, period = 2):
     if return is greater than 1% then we go for long position
     if return is less than -1% then we go for short position 
     """
-    df['rets'] = df.close.pct_change(periods=2).mul(100)
-    df['signals'] = np.where((df['rets'] > 1), 1, 0) #long_postion
-    df['signals'] = np.where((df['rets'] < -1), -1, df['signals']) #short_position
+    df['rets'] = df.close.pct_change(periods=period).mul(100)
+    df['signals'] = np.where((df['rets'] > 1.5), 1, 0) #long_postion
+    df['signals'] = np.where((df['rets'] < -1.5), -1, df['signals']) #short_position
     df.dropna(inplace=True)
     signals = df['signals']
     df.drop(['rets','signals'], axis=1, inplace=True)
@@ -197,28 +198,52 @@ def train_bag_model_with_dtc(X: np.array, y: np.array, signal_type='returns'):
     print("Precision:", precision)
     print("Recall:", recall)
     print("F1 Score:", f1)
-    plot_cm(cm)                                                                        
+    plot_cm(cm)   
+
+def get_indicator_signal(df: pd.DataFrame):
+    """
+    This function receives featured dataframe and returns a dataframe with 
+    indicator trading signal
+    """
+    signals = pd.DataFrame()
+    
+    signals['sma_signal'] = np.where((df['sma_5'] > df['sma_10']), 1, 0)
+    signals['sma_signal'] = np.where((df['sma_5'] < df['sma_10']), -1, signals['sma_signal'])  
+
+    signals['ema_signal'] = np.where((df['ema_5'] > df['ema_10']), 1, 0)
+    signals['ema_signal'] = np.where((df['ema_5'] < df['ema_10']), -1, signals['ema_signal'])  
+
+    signals['macd_signal'] = np.where((df['MACD_12_26_9'] > df['MACDs_12_26_9']) & (df['MACD_12_26_9'] > 0),1,0)
+    signals['macd_signal'] = np.where((df['MACD_12_26_9'] > df['MACDs_12_26_9']) & (df['MACD_12_26_9'] > 0),1,signals['macd_signal'])
+
+    signals['rsi_signal'] = np.where((df['rsi_14'] > 70), -1, 0)
+    signals['rsi_signal'] = np.where((df['rsi_14'] < 30), 1, signals['rsi_signal'])
+
+    signals['bb_signal'] = np.where((df['BBU_5_2.0'] < df['close']), -1, 0)
+    signals['bb_signal'] = np.where((df['BBL_5_2.0'] > df['close']), 1, 0)
+
+    return signals
+
     
 def group3_ensemble_model_signals(df: pd.DataFrame):
     # adding feutures to the data  
     X = add_features(df)
+
+    # get indicator_signal
+    signals = get_indicator_signal(X)
     
     # scaling the dataset
     X_scaled = data_preprocess(X)
     
     # loading the trained model
-<<<<<<< HEAD
-    loaded_model = joblib.load({root_dir} + 'bagging_logistic_regression.pkl')
-=======
-    loaded_model = joblib.load('/home/sohan/Desktop/Final_Assesment/modules/random_forrest_classifier_on_return_signal.pkl')
-
-    # loaded_model = tf.keras.model.load('/home/sohan/Desktop/Final_Assesment/modules/ensemble_trading_strategy.pkl')
->>>>>>> 5066eb8dff93f1e3b99bda5172a230b96948f4d4
+    loaded_model = joblib.load('../modules/bagging_logistic_regression_on_returns.pkl')
 
     # Now you can use the loaded model to make predictions
     predictions = loaded_model.predict(X_scaled)
+    signal = np.where((predictions == 1) & (signals['macd_signal'] == 1) & (signals['ema_signal'] == 1), 1, 0)
+    signal = np.where((predictions == -1) & (signals['macd_signal'] == -1) & (signals['ema_signal'] == -1), -1, signal)
     
-    return predictions[-1]
+    return signal[-1]
     
     
 
